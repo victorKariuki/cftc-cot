@@ -1,0 +1,14 @@
+# Build/Env
+venv/
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+
+# Tests
+.pytest_cache/
+
+# Local
+.env
+.DS_Store
