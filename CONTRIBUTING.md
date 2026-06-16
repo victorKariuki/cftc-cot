@@ -18,21 +18,39 @@ Please use the [Feature Request issue template](.github/ISSUE_TEMPLATE/feature_r
 
 ### Development Process
 
-1. **Fork** the repository.
-2. **Clone** your fork.
-3. **Create a branch** for your feature or fix.
-4. **Install development dependencies**:
+This project uses the **Git-Flow** workflow.
+
+1. **Fork** the repository and **Clone** your fork.
+2. **Install development dependencies**:
    ```bash
    pip install -e ".[dev]"
    ```
-5. **Make your changes**.
-6. **Add/Update tests** to cover your changes.
-7. **Run tests**:
+3. **Initialize Git-Flow** (if not already done):
+   ```bash
+   git flow init -d
+   ```
+4. **Create a branch** for your task:
+   ```bash
+   # For new features
+   git flow feature start <name>
+   
+   # For bug fixes
+   git flow bugfix start <name>
+   ```
+5. **Make your changes** and add/update tests.
+6. **Run tests**:
    ```bash
    pytest
    ```
-8. **Commit** using [Conventional Commits](https://www.conventionalcommits.org/).
-9. **Push** to your branch and submit a **Pull Request**.
+7. **Finish your branch**:
+   ```bash
+   # For features
+   git flow feature finish <name>
+   
+   # For bug fixes
+   git flow bugfix finish <name>
+   ```
+8. **Push** your changes to `develop` and submit a Pull Request to merge `develop` into `master` for releases.
 
 ### Code Style
 - Follow PEP 8.
