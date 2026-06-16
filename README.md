@@ -1,13 +1,21 @@
 # CFTC COT SDK
 
-A Python SDK for accessing, querying, and analyzing CFTC Commitments of Traders (COT) data.
+[![PyPI](https://img.shields.io/pypi/v/cftc-cot.svg)](https://pypi.org/project/cftc-cot/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Data Source
-This SDK provides programmatic access to data sourced from the [CFTC Public Reporting Portal](https://publicreporting.cftc.gov/stories/s/r4w3-av2u).
+A robust, verified Python SDK for accessing, querying, and analyzing [CFTC Commitments of Traders (COT)](https://publicreporting.cftc.gov/stories/s/r4w3-av2u) data.
 
-## Foundation & Acknowledgements
-The core API interaction patterns for this SDK were inspired by the official Socrata developer examples:
-[https://dev.socrata.com/foundry/publicreporting.cftc.gov/6dca-aqww](https://dev.socrata.com/foundry/publicreporting.cftc.gov/6dca-aqww)
+## Overview
+
+The `cftc-cot` SDK provides a fluent, production-ready interface for the CFTC's SODA2 API. It simplifies the complexity of querying 6 different CFTC datasets, handles API-specific naming quirks, and provides powerful post-fetch analysis tools.
+
+## Key Features
+
+- **Fluent API**: Chainable query building for intuitive data retrieval.
+- **Production-Tested**: Verified field mappings and API interactions against live CFTC data.
+- **Advanced Analysis**: Built-in metrics including Net Positions, Z-Scores, and extreme positioning detection.
+- **Robust Field Handling**: Preserves official API quirks (typos, naming inconsistencies) using structured field constants.
+- **Production Ready**: Full type hinting, comprehensive exception hierarchy, and rate-limiting support via app tokens.
 
 ## Installation
 
@@ -20,34 +28,23 @@ pip install cftc-cot
 ```python
 from cftc_cot import COTClient, COTAnalysis
 
+# Initialize client
 client = COTClient()
 
-# Get 52 weeks of Crude Oil data
+# Query: 52-week history of Crude Oil positioning
 df = client.legacy().market("Crude Oil").last_n_weeks(52).execute()
 
-# Compute net positions
+# Analyze: Compute net positions and Z-scores
 analysis = COTAnalysis(df, classification="legacy")
-df = analysis.net_positions()
+df_analyzed = analysis.z_scores()
 
-print(df[['report_date_as_yyyy_mm_dd', 'noncomm_net']].head())
+print(df_analyzed[['report_date_as_yyyy_mm_dd', 'noncomm_net', 'noncomm_net_zscore']].tail())
 ```
 
 ## Documentation
 
-- **`COTClient`**: Main entry point. Supports `app_token` for higher rate limits.
-- **`COTQuery`**: Fluent query builder for filtering and selecting data.
-- **`COTAnalysis`**: Post-fetch metrics (Net Positions, Z-scores).
-- **`cftc_cot.fields`**: Constants for all dataset fields (e.g., `LegacyFields.NONCOMM_LONG`).
-
-## Caching
-
-```python
-# Enable disk caching to reduce API calls
-client = COTClient(cache="disk", cache_dir="./cot_cache")
-```
-
-## Contributing
-See `CHANGELOG.md` for version history.
+For a complete API reference, guides, and dataset specifications, please visit our **[GitHub Wiki](https://github.com/victorKariuki/cftc-cot/wiki)**.
 
 ## License
-MIT
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
