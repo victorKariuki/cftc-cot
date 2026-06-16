@@ -5,7 +5,16 @@ from typing import Dict, List
 from .fields import LegacyFields, DisaggregatedFields, TFFFields
 
 class COTAnalysis:
-    """Computes metrics for CFTC COT datasets."""
+    """
+    Computes metrics for CFTC COT datasets.
+
+    Args:
+        df: The pandas DataFrame containing the COT data.
+        classification: The dataset classification ("legacy", "disaggregated", or "tff").
+
+    Raises:
+        ValueError: If an unknown classification is provided.
+    """
 
     def __init__(self, df: pd.DataFrame, classification: str):
         self.df = df.copy()
@@ -34,14 +43,27 @@ class COTAnalysis:
             raise ValueError(f"Unknown classification: {classification}")
 
     def net_positions(self) -> pd.DataFrame:
-        """Calculate net positions (long - short)."""
+        """
+        Calculate net positions (long - short) for each trader category.
+
+        Returns:
+            The DataFrame enriched with net position columns.
+        """
         for col, (long_f, short_f) in self.net_map.items():
             if long_f in self.df.columns and short_f in self.df.columns:
                 self.df[col] = self.df[long_f] - self.df[short_f]
         return self.df
 
     def z_scores(self, window: int = 52) -> pd.DataFrame:
-        """Calculate Z-scores for net positions."""
+        """
+        Calculate rolling Z-scores for net positions.
+
+        Args:
+            window: The rolling window size (number of weeks).
+
+        Returns:
+            The DataFrame enriched with Z-score columns.
+        """
         self.net_positions()
         for col in self.net_map.keys():
             if col in self.df.columns:

@@ -57,54 +57,137 @@ class COTQuery:
         return "legacy"
 
     def where(self, condition: str) -> COTQuery:
-        """Add WHERE clause."""
+        """
+        Add a WHERE clause to the SODA2 query.
+
+        Args:
+            condition: The SQL-like condition string (e.g., "market = 'GOLD'").
+
+        Returns:
+            The COTQuery instance (for method chaining).
+        """
         self._where_clauses.append(condition)
         return self
 
     def select(self, *columns: str) -> COTQuery:
-        """Select specific columns."""
+        """
+        Specify columns to select.
+
+        Args:
+            *columns: Variable length argument list of column names to include.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._select_fields = list(columns)
         return self
 
     def order_by(self, column: str, desc: bool = False) -> COTQuery:
-        """Sort results."""
+        """
+        Sort results by a specified column.
+
+        Args:
+            column: The column name to order by.
+            desc: If True, order in descending order; otherwise ascending.
+
+        Returns:
+            The COTQuery instance.
+        """
         direction = "DESC" if desc else "ASC"
         self._order_by = f"{column} {direction}"
         return self
 
     def limit(self, n: int) -> COTQuery:
-        """Limit results."""
+        """
+        Limit the number of results returned.
+
+        Args:
+            n: Maximum number of rows to return.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._limit = min(n, 50000)
         return self
 
     def offset(self, n: int) -> COTQuery:
-        """Skip rows."""
+        """
+        Skip a specific number of rows.
+
+        Args:
+            n: Number of rows to skip.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._offset = n
         return self
 
     def date_range(self, start: str, end: str) -> COTQuery:
-        """Filter by date range."""
+        """
+        Filter by date range (inclusive).
+
+        Args:
+            start: Start date in 'YYYY-MM-DD' format.
+            end: End date in 'YYYY-MM-DD' format.
+
+        Returns:
+            The COTQuery instance.
+        """
         self.where(f"report_date_as_yyyy_mm_dd >= '{start}'")
         self.where(f"report_date_as_yyyy_mm_dd <= '{end}'")
         return self
 
     def date_after(self, date: str) -> COTQuery:
-        """Filter to dates >= date."""
+        """
+        Filter to dates greater than or equal to the specified date.
+
+        Args:
+            date: Date in 'YYYY-MM-DD' format.
+
+        Returns:
+            The COTQuery instance.
+        """
         self.where(f"report_date_as_yyyy_mm_dd >= '{date}'")
         return self
 
     def date_before(self, date: str) -> COTQuery:
-        """Filter to dates <= date."""
+        """
+        Filter to dates less than or equal to the specified date.
+
+        Args:
+            date: Date in 'YYYY-MM-DD' format.
+
+        Returns:
+            The COTQuery instance.
+        """
         self.where(f"report_date_as_yyyy_mm_dd <= '{date}'")
         return self
 
     def last_n_weeks(self, n: int = 52) -> COTQuery:
-        """Filter to last N weeks."""
+        """
+        Filter to results from the last N weeks.
+
+        Args:
+            n: Number of weeks to look back.
+
+        Returns:
+            The COTQuery instance.
+        """
         start_date = (datetime.now() - timedelta(weeks=n)).strftime("%Y-%m-%d")
         return self.date_after(start_date)
 
     def market(self, name: str, exact: bool = False) -> COTQuery:
-        """Filter by market name (case-insensitive)."""
+        """
+        Filter by market name (case-insensitive).
+
+        Args:
+            name: The name of the market.
+            exact: If True, performs an exact match; otherwise, partial match.
+
+        Returns:
+            The COTQuery instance.
+        """
         name_upper = name.upper()
         if exact:
             self.where(f"upper(market_and_exchange_names) = '{name_upper}'")
@@ -113,91 +196,217 @@ class COTQuery:
         return self
 
     def markets_in(self, *names: str) -> COTQuery:
-        """Filter to multiple markets (case-insensitive)."""
+        """
+        Filter to multiple markets (case-insensitive).
+
+        Args:
+            *names: Variable length argument list of market names.
+
+        Returns:
+            The COTQuery instance.
+        """
         conditions = [f"upper(market_and_exchange_names) like '{name.upper()}%'" for name in names]
         self.where(f"({' OR '.join(conditions)})")
         return self
 
     def _check_classification(self, allowed: str) -> None:
+        """
+        Internal helper to validate dataset classification.
+        
+        Args:
+            allowed: The expected dataset classification.
+            
+        Raises:
+            COTClassificationError: If the classification does not match the allowed type.
+        """
         if self.classification != allowed:
             raise COTClassificationError(f"Method only works with {allowed} datasets")
 
     def noncomm_long_gt(self, amount: int) -> COTQuery:
-        """Non-commercial long > amount (Legacy only)."""
+        """
+        Legacy: Non-commercial long > amount.
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._check_classification("legacy")
         self.where(f"noncomm_positions_long_all > {amount}")
         return self
 
     def noncomm_short_gt(self, amount: int) -> COTQuery:
-        """Non-commercial short > amount (Legacy only)."""
+        """
+        Legacy: Non-commercial short > amount.
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._check_classification("legacy")
         self.where(f"noncomm_positions_short_all > {amount}")
         return self
 
     def comm_long_gt(self, amount: int) -> COTQuery:
-        """Commercial long > amount (Legacy only)."""
+        """
+        Legacy: Commercial long > amount.
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._check_classification("legacy")
         self.where(f"comm_positions_long_all > {amount}")
         return self
 
     def comm_short_gt(self, amount: int) -> COTQuery:
-        """Commercial short > amount (Legacy only)."""
+        """
+        Legacy: Commercial short > amount.
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._check_classification("legacy")
         self.where(f"comm_positions_short_all > {amount}")
         return self
 
     def swap_dealers_long_gt(self, amount: int) -> COTQuery:
-        """Swap dealer long > amount (Disaggregated only)."""
+        """
+        Disaggregated: Swap dealer long > amount.
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._check_classification("disaggregated")
         self.where(f"swap_positions_long_all > {amount}")
         return self
 
     def managed_money_long_gt(self, amount: int) -> COTQuery:
-        """Managed money long > amount (Disaggregated only)."""
+        """
+        Disaggregated: Managed money long > amount.
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._check_classification("disaggregated")
         self.where(f"m_money_positions_long_all > {amount}")
         return self
 
     def producer_merchant_short_gt(self, amount: int) -> COTQuery:
-        """Producer/merchant short > amount (Disaggregated only)."""
+        """
+        Disaggregated: Producer/merchant short > amount.
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._check_classification("disaggregated")
         self.where(f"prod_merc_positions_short > {amount}")
         return self
 
     def dealer_long_gt(self, amount: int) -> COTQuery:
-        """Dealer long > amount (TFF only)."""
+        """
+        TFF: Dealer long > amount.
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._check_classification("tff")
         self.where(f"dealer_positions_long_all > {amount}")
         return self
 
     def asset_manager_long_gt(self, amount: int) -> COTQuery:
-        """Asset manager long > amount (TFF only)."""
+        """
+        TFF: Asset manager long > amount.
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._check_classification("tff")
         self.where(f"asset_mgr_positions_long > {amount}")
         return self
 
     def leveraged_funds_long_gt(self, amount: int) -> COTQuery:
-        """Leveraged funds long > amount (TFF only)."""
+        """
+        TFF: Leveraged funds long > amount.
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self._check_classification("tff")
         self.where(f"lev_money_positions_long > {amount}")
         return self
 
     def long_positions_gt(self, amount: int) -> COTQuery:
-        """Total reportable long > amount (All datasets)."""
+        """
+        Filter total reportable long positions > amount (All datasets).
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self.where(f"tot_rept_positions_long_all > {amount}")
         return self
 
     def short_positions_gt(self, amount: int) -> COTQuery:
-        """Total reportable short > amount (All datasets)."""
+        """
+        Filter total reportable short positions > amount (All datasets).
+
+        Args:
+            amount: The threshold value.
+
+        Returns:
+            The COTQuery instance.
+        """
         self.where(f"tot_rept_positions_short > {amount}")
         return self
 
     def order_by_date(self, desc: bool = True) -> COTQuery:
-        """Sort by date."""
+        """
+        Sort results by report date.
+
+        Args:
+            desc: If True, order in descending order; otherwise ascending.
+
+        Returns:
+            The COTQuery instance.
+        """
         return self.order_by("report_date_as_yyyy_mm_dd", desc=desc)
 
     def to_soda2(self) -> str:
-        """Get the SODA2 query string."""
+        """
+        Generate the SODA2 query string.
+
+        Returns:
+            A string representing the full SODA2 query.
+        """
         query_parts = []
         if self._select_fields:
             query_parts.append(f"SELECT {', '.join(self._select_fields)}")
@@ -263,7 +472,15 @@ class COTQuery:
             return pd.DataFrame()
 
     def fetch_all_pages(self, page_size: int = 50000) -> pd.DataFrame:
-        """Auto-paginate and fetch all results."""
+        """
+        Auto-paginate and fetch all results.
+
+        Args:
+            page_size: Number of records per API request.
+
+        Returns:
+            A pandas DataFrame containing all results.
+        """
         all_results = []
         offset = 0
         while True:
