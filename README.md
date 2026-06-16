@@ -5,6 +5,10 @@ A Python SDK for accessing, querying, and analyzing CFTC Commitments of Traders 
 ## Data Source
 This SDK provides programmatic access to data sourced from the [CFTC Public Reporting Portal](https://publicreporting.cftc.gov/stories/s/r4w3-av2u).
 
+## Foundation & Acknowledgements
+The core API interaction patterns for this SDK were inspired by the official Socrata developer examples:
+[https://dev.socrata.com/foundry/publicreporting.cftc.gov/6dca-aqww](https://dev.socrata.com/foundry/publicreporting.cftc.gov/6dca-aqww)
+
 ## Installation
 
 ```bash
