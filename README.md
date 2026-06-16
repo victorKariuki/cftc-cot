@@ -20,7 +20,7 @@ The `cftc-cot` SDK provides a fluent, production-ready interface for the CFTC's 
 ## Installation
 
 ```bash
-pip install cftc-cot
+pip install cftc-cot-soda
 ```
 
 ## Quick Start
