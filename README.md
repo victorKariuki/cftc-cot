@@ -2,6 +2,9 @@
 
 A Python SDK for accessing, querying, and analyzing CFTC Commitments of Traders (COT) data.
 
+## Data Source
+This SDK provides programmatic access to data sourced from the [CFTC Public Reporting Portal](https://publicreporting.cftc.gov/stories/s/r4w3-av2u).
+
 ## Installation
 
 ```bash
