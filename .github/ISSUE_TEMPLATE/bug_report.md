@@ -10,10 +10,15 @@ assignees: ''
 A clear and concise description of what the bug is.
 
 ## Steps to Reproduce
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+Please provide a minimal, executable code snippet to reproduce the issue:
+
+```python
+from cftc_cot import COTClient
+# ... your code here
+```
+
+1. Run the code snippet above...
+2. Observe the error or unexpected behavior.
 
 ## Expected Behavior
 A clear and concise description of what you expected to happen.
@@ -24,4 +29,4 @@ A clear and concise description of what you expected to happen.
 - `cftc-cot` version: [e.g. 0.1.0]
 
 ## Additional Context
-Add any other context about the problem here.
+Add any other context about the problem here (e.g., tracebacks).
