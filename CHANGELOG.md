@@ -5,9 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2026-06-20
 
 ### Added
+- **MCP server** (`cftc-cot-mcp`, optional `mcp` extra): a FastMCP stdio server
+  exposing COT data and analysis to MCP-compatible LLM clients. Tools for markets,
+  reports, history, net positions, COT Index, Z-scores, long/short ratios,
+  week-over-week change, percentile rank, and extremes (all with an `exact` flag
+  and clear no-match errors); `cot://datasets` and `cot://fields/{classification}`
+  resources; and `analyze_market` / `positioning_summary` prompts.
+- `exact` parameter on `COTClient.latest()` / `COTClient.history()`.
 - PyPI trove classifiers (Python versions, audience, topics) so the
   `pyversions` badge and PyPI metadata populate. Takes effect on the next release.
 

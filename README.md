@@ -82,6 +82,32 @@ cftc-cot index   --dataset legacy --market "Crude Oil" --window 156
 cftc-cot --format json --cache memory latest --dataset legacy --market "Gold"
 ```
 
+### MCP Server
+
+Expose COT data to MCP-compatible LLM clients (Claude Desktop, IDE assistants) over
+stdio. Install the extra and run the `cftc-cot-mcp` command:
+
+```bash
+pip install cftc-cot-soda[mcp]   # requires Python >= 3.10
+cftc-cot-mcp
+```
+
+- **Tools**: `list_markets`, `latest_report`, `history`, `net_positions`, `cot_index`, `z_scores`, `long_short_ratios`, `wow_change`, `percentile_rank`, `extremes` (all support an `exact` flag and return clear errors when a market doesn't match).
+- **Resources**: `cot://datasets`, `cot://fields/{classification}`.
+- **Prompts**: `analyze_market`, `positioning_summary`.
+
+Example Claude Desktop config (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "cftc-cot": {
+      "command": "cftc-cot-mcp"
+    }
+  }
+}
+```
+
 ## Documentation
 
 For a complete API reference, guides, and dataset specifications, please visit our **[GitHub Wiki](https://github.com/victorKariuki/cftc-cot/wiki)**.

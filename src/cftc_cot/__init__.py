@@ -5,7 +5,7 @@ from .cache import COTCache, MemoryCache, DiskCache
 from .fields import LegacyFields, DisaggregatedFields, TFFFields
 from .exceptions import COTError, COTQueryError, COTConnectionError, COTClassificationError, COTDataError
 
-__version__ = "0.2.1"
+__version__ = "0.3.0"
 
 __all__ = [
     "COTClient",
