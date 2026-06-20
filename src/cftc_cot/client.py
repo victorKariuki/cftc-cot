@@ -64,20 +64,21 @@ class COTClient:
         return self._query("tff_futures")
 
     # High-level convenience methods
-    def latest(self, dataset: str, market: str) -> pd.DataFrame:
+    def latest(self, dataset: str, market: str, exact: bool = False) -> pd.DataFrame:
         """
         Fetch the latest report for a specified market.
 
         Args:
             dataset: The dataset name (e.g., "legacy", "disaggregated", "tff").
             market: The market name.
+            exact: If True, match the market name exactly; otherwise prefix match.
 
         Returns:
             A pandas DataFrame with the latest report record.
         """
-        return self._query(dataset).market(market).order_by_date(desc=True).limit(1).execute()
+        return self._query(dataset).market(market, exact=exact).order_by_date(desc=True).limit(1).execute()
 
-    def history(self, dataset: str, market: str, weeks: int = 52) -> pd.DataFrame:
+    def history(self, dataset: str, market: str, weeks: int = 52, exact: bool = False) -> pd.DataFrame:
         """
         Fetch N-week history for a specified market.
 
@@ -85,11 +86,12 @@ class COTClient:
             dataset: The dataset name.
             market: The market name.
             weeks: Number of weeks of historical data to fetch.
+            exact: If True, match the market name exactly; otherwise prefix match.
 
         Returns:
             A pandas DataFrame with historical records.
         """
-        return self._query(dataset).market(market).last_n_weeks(weeks).order_by_date(desc=True).execute()
+        return self._query(dataset).market(market, exact=exact).last_n_weeks(weeks).order_by_date(desc=True).execute()
 
     def list_markets(self, dataset: str) -> list[str]:
         """
