@@ -34,6 +34,16 @@ pip install cftc-cot-soda
 pip install cftc-cot-soda[cache]
 ```
 
+### Install from GitHub
+
+```bash
+# Latest tagged release, straight from the source repo
+pip install git+https://github.com/victorKariuki/cftc-cot.git@v0.2.0
+
+# Or the wheel attached to a GitHub Release
+pip install https://github.com/victorKariuki/cftc-cot/releases/download/v0.2.0/cftc_cot_soda-0.2.0-py3-none-any.whl
+```
+
 ## Quick Start
 
 ```python

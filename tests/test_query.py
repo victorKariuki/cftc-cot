@@ -1,7 +1,7 @@
 import pytest
 from requests.exceptions import ConnectionError as ReqConnectionError
-from cftc_cot.query import COTQuery, _q
-from cftc_cot.exceptions import COTClassificationError, COTConnectionError
+from cftc_cot.query import COTQuery, _q, _num
+from cftc_cot.exceptions import COTClassificationError, COTConnectionError, COTQueryError
 
 def test_query_initialization():
     query = COTQuery("legacy")
@@ -27,6 +27,28 @@ def test_market_escapes_apostrophe():
     query = COTQuery("legacy").market("O'Brien")
     # Escaped literal must appear; no lone apostrophe that would break the query.
     assert "O''BRIEN" in query.to_soda2()
+
+
+def test_num_coerces_valid():
+    assert _num(5000) == 5000
+    assert _num("5000") == 5000
+    assert _num(5000.9) == 5000
+
+
+def test_num_rejects_injection():
+    with pytest.raises(COTQueryError):
+        _num("0 OR 1=1")
+
+
+def test_numeric_filter_rejects_injection():
+    # The amount is interpolated into the query, so non-numeric input must be rejected.
+    with pytest.raises(COTQueryError):
+        COTQuery("legacy").noncomm_long_gt("0 OR 1=1")
+
+
+def test_numeric_filter_accepts_int():
+    q = COTQuery("legacy").noncomm_long_gt(5000)
+    assert "noncomm_positions_long_all > 5000" in q.to_soda2()
 
 
 def test_retry_succeeds_after_transient_failure():
