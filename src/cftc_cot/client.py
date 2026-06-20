@@ -93,23 +93,73 @@ class COTClient:
         """
         return self._query(dataset).market(market, exact=exact).last_n_weeks(weeks).order_by_date(desc=True).execute()
 
-    def list_markets(self, dataset: str) -> list[str]:
+    def list_markets(
+        self,
+        dataset: str,
+        weeks: Optional[int] = None,
+        exchange: Optional[str] = None,
+    ) -> list[str]:
         """
-        List all unique available markets for a given dataset.
+        List the unique markets for a dataset.
+
+        By default this spans the dataset's full history, which includes retired
+        markets. Pass ``weeks`` to restrict the result to markets that actually
+        reported within the last N weeks — so the pool tracks the same window you
+        intend to query and stale, delisted contracts drop out.
 
         Args:
             dataset: The dataset name.
+            weeks: If given, only include markets reporting within the last N weeks.
+            exchange: If given, only include markets on this exchange (exact match
+                on the segment after the final " - ").
 
         Returns:
-            A list of unique market names.
+            A sorted list of unique market names.
         """
         query = self._query(dataset)
-        # SODA2 query for distinct values
-        q = "SELECT DISTINCT market_and_exchange_names"
+        if weeks is not None:
+            query.last_n_weeks(weeks)
+        if exchange:
+            query.exchange(exchange, exact=True)
 
-        try:
-            results = query._request_with_retry(query=q)
-            return [r["market_and_exchange_names"] for r in results]
-        except Exception as e:
-            logger.error(f"Error fetching market list: {e}")
-            return []
+        return sorted(set(query.distinct_values("market_and_exchange_names")))
+
+    def list_exchanges(self, dataset: str, weeks: Optional[int] = None) -> list[str]:
+        """
+        List the unique exchanges for a dataset.
+
+        Exchanges are derived from the trailing component of each market name.
+
+        Args:
+            dataset: The dataset name.
+            weeks: If given, only include exchanges active within the last N weeks.
+
+        Returns:
+            A sorted list of unique exchange names.
+        """
+        exchanges = set()
+        for full in self.list_markets(dataset, weeks=weeks):
+            _, exchange = self.split_market_exchange(full)
+            if exchange:
+                exchanges.add(exchange)
+        return sorted(exchanges)
+
+    @staticmethod
+    def split_market_exchange(name: str) -> tuple[str, str]:
+        """
+        Split a ``market_and_exchange_names`` value into ``(market, exchange)``.
+
+        The format is ``"<MARKET> - <EXCHANGE>"``; market names may contain a bare
+        hyphen (e.g. ``"WHEAT-SRW"``), so the split uses the final " - " separator.
+        Returns ``(name, "")`` when no separator is present.
+
+        Args:
+            name: The combined market-and-exchange name.
+
+        Returns:
+            A ``(market, exchange)`` tuple.
+        """
+        market, sep, exchange = name.rpartition(" - ")
+        if not sep:
+            return name, ""
+        return market, exchange

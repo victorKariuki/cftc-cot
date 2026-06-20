@@ -51,6 +51,46 @@ def test_numeric_filter_accepts_int():
     assert "noncomm_positions_long_all > 5000" in q.to_soda2()
 
 
+def test_exchange_partial_match():
+    q = COTQuery("legacy").exchange("Chicago Mercantile Exchange")
+    soda = q.to_soda2()
+    assert "like '%CHICAGO MERCANTILE EXCHANGE%'" in soda
+
+
+def test_exchange_exact_matches_trailing_segment():
+    q = COTQuery("legacy").exchange("Chicago Mercantile Exchange", exact=True)
+    # Exact = the segment after the final " - ".
+    assert "like '% - CHICAGO MERCANTILE EXCHANGE'" in q.to_soda2()
+
+
+def test_exchange_escapes_apostrophe():
+    q = COTQuery("legacy").exchange("O'Brien Exchange")
+    assert "O''BRIEN EXCHANGE" in q.to_soda2()
+
+
+def test_distinct_values_builds_query_with_filters():
+    query = COTQuery("legacy").last_n_weeks(4)
+    captured = {}
+
+    def fake_get(dataset_id, **kwargs):
+        captured["query"] = kwargs["query"]
+        return [
+            {"market_and_exchange_names": "GOLD - COMMODITY EXCHANGE INC."},
+            {"market_and_exchange_names": "SILVER - COMMODITY EXCHANGE INC."},
+        ]
+
+    query.client.get = fake_get
+    values = query.distinct_values("market_and_exchange_names")
+
+    assert values == [
+        "GOLD - COMMODITY EXCHANGE INC.",
+        "SILVER - COMMODITY EXCHANGE INC.",
+    ]
+    assert captured["query"].startswith("SELECT DISTINCT market_and_exchange_names")
+    assert "WHERE report_date_as_yyyy_mm_dd >=" in captured["query"]
+    assert "LIMIT" in captured["query"]
+
+
 def test_retry_succeeds_after_transient_failure():
     query = COTQuery("legacy", max_retries=3, backoff_base=0)
     calls = {"n": 0}
