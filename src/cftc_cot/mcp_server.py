@@ -25,7 +25,7 @@ import pandas as pd
 
 from .client import COTClient
 from .analysis import COTAnalysis
-from .cli import _classification_for
+from .cli import classification_for
 from .query import COTQuery
 
 try:
@@ -159,7 +159,7 @@ async def net_positions(
     """
     def work() -> list[dict[str, Any]]:
         df = _history(dataset, market, weeks, exact)
-        out = COTAnalysis(df, _classification_for(dataset)).net_positions()
+        out = COTAnalysis(df, classification_for(dataset)).net_positions()
         cols = [c for c in out.columns if c == "report_date_as_yyyy_mm_dd" or c.endswith("_net")]
         return _records(out[cols] if cols else out)
     return await _run(work)
@@ -190,7 +190,7 @@ async def cot_index(
     """
     def work() -> list[dict[str, Any]]:
         df = _history(dataset, market, weeks, exact)
-        out = COTAnalysis(df, _classification_for(dataset)).cot_index(window=window)
+        out = COTAnalysis(df, classification_for(dataset)).cot_index(window=window)
         cols = [c for c in out.columns if c == "report_date_as_yyyy_mm_dd" or c.endswith("_cot_index")]
         return _records((out[cols] if cols else out).tail(tail))
     return await _run(work)
@@ -218,7 +218,7 @@ async def z_scores(
     """
     def work() -> list[dict[str, Any]]:
         df = _history(dataset, market, weeks, exact)
-        out = COTAnalysis(df, _classification_for(dataset)).z_scores(window=window)
+        out = COTAnalysis(df, classification_for(dataset)).z_scores(window=window)
         cols = [c for c in out.columns if c == "report_date_as_yyyy_mm_dd" or c.endswith("_zscore")]
         return _records((out[cols] if cols else out).tail(tail))
     return await _run(work)
@@ -239,7 +239,7 @@ async def long_short_ratios(
     """
     def work() -> list[dict[str, Any]]:
         df = _history(dataset, market, weeks, exact)
-        out = COTAnalysis(df, _classification_for(dataset)).long_short_ratios()
+        out = COTAnalysis(df, classification_for(dataset)).long_short_ratios()
         cols = [c for c in out.columns if c == "report_date_as_yyyy_mm_dd" or c.endswith("_ls_ratio")]
         return _records(out[cols] if cols else out)
     return await _run(work)
@@ -260,7 +260,7 @@ async def wow_change(
     """
     def work() -> list[dict[str, Any]]:
         df = _history(dataset, market, weeks, exact)
-        out = COTAnalysis(df, _classification_for(dataset)).wow_change()
+        out = COTAnalysis(df, classification_for(dataset)).wow_change()
         cols = [c for c in out.columns if c == "report_date_as_yyyy_mm_dd" or c.endswith("_wow")]
         return _records(out[cols] if cols else out)
     return await _run(work)
@@ -287,7 +287,7 @@ async def percentile_rank(
     """
     def work() -> float:
         df = _history(dataset, market, weeks, exact)
-        analysis = COTAnalysis(df, _classification_for(dataset))
+        analysis = COTAnalysis(df, classification_for(dataset))
         try:
             return analysis.percentile_rank(column)
         except KeyError as exc:
@@ -317,7 +317,7 @@ async def extremes(
     """
     def work() -> list[dict[str, Any]]:
         df = _history(dataset, market, weeks, exact)
-        out = COTAnalysis(df, _classification_for(dataset)).extremes(threshold=threshold)
+        out = COTAnalysis(df, classification_for(dataset)).extremes(threshold=threshold)
         cols = [c for c in out.columns if c == "report_date_as_yyyy_mm_dd" or c.endswith("_extreme")]
         return _records((out[cols] if cols else out).tail(1))
     return await _run(work)

@@ -101,7 +101,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if df.empty:
             _print_df(df, fmt)
             return 1
-        classification = _classification_for(args.dataset)
+        classification = classification_for(args.dataset)
         analyzed = COTAnalysis(df, classification).cot_index(window=args.window)
         cols = [c for c in analyzed.columns
                 if c == "report_date_as_yyyy_mm_dd" or c.endswith("_cot_index")]
@@ -110,7 +110,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     return 0
 
 
-def _classification_for(dataset: str) -> str:
+def classification_for(dataset: str) -> str:
     """Map a dataset name to its analysis classification."""
     if "disaggregated" in dataset:
         return "disaggregated"
