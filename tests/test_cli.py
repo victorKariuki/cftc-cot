@@ -23,9 +23,9 @@ def test_build_parser_requires_command():
 
 
 def test_classification_for():
-    assert cli._classification_for("legacy") == "legacy"
-    assert cli._classification_for("disaggregated_futures") == "disaggregated"
-    assert cli._classification_for("tff_combined") == "tff"
+    assert cli.classification_for("legacy") == "legacy"
+    assert cli.classification_for("disaggregated_futures") == "disaggregated"
+    assert cli.classification_for("tff_combined") == "tff"
 
 
 def test_main_latest_monkeypatched(monkeypatch, capsys):

@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-06-20
+
+### Added
+- `COTQuery.exchange(name, exact=False)` — filter by exchange (the trailing
+  component of `market_and_exchange_names`).
+- `COTQuery.distinct_values(column)` — fetch a column's distinct values honoring
+  the current filters; powers market/exchange discovery within a date window.
+- `COTClient.list_markets(dataset, weeks=None, exchange=None)` — optional `weeks`
+  restricts the result to markets that reported in the last N weeks (retired
+  contracts drop out), plus optional `exchange` filtering.
+- `COTClient.list_exchanges(dataset, weeks=None)` and the
+  `COTClient.split_market_exchange(name)` helper.
+
+### Changed
+- `list_markets` now returns a sorted, de-duplicated list and no longer truncates
+  at the SODA2 default page size of 1000.
+
 ## [0.3.0] - 2026-06-20
 
 ### Added

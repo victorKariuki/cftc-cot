@@ -294,6 +294,29 @@ class COTQuery:
         self.where(f"({' OR '.join(conditions)})")
         return self
 
+    def exchange(self, name: str, exact: bool = False) -> COTQuery:
+        """
+        Filter by exchange name (case-insensitive).
+
+        The exchange is the trailing component of ``market_and_exchange_names``
+        (e.g. ``"GOLD - COMMODITY EXCHANGE INC."`` has exchange
+        ``"COMMODITY EXCHANGE INC."``).
+
+        Args:
+            name: The exchange name.
+            exact: If True, match the exchange exactly (the segment after the
+                final " - "); otherwise substring-match anywhere in the name.
+
+        Returns:
+            The COTQuery instance.
+        """
+        name_upper = _q(name.upper())
+        if exact:
+            self.where(f"upper(market_and_exchange_names) like '% - {name_upper}'")
+        else:
+            self.where(f"upper(market_and_exchange_names) like '%{name_upper}%'")
+        return self
+
     def _check_classification(self, allowed: str) -> None:
         """
         Internal helper to validate dataset classification.
@@ -532,6 +555,43 @@ class COTQuery:
         if self.cache is not None:
             self.cache.set(self._cache_key(query=query), count, self.cache_ttl)
         return count
+
+    def distinct_values(self, column: str) -> List[Any]:
+        """
+        Return the distinct values of a column, honoring the current filters.
+
+        Powers discovery queries such as listing the markets or exchanges that
+        reported within a date window (combine with :meth:`last_n_weeks` or
+        :meth:`date_range`). Honors the configured cache.
+
+        Args:
+            column: The column to select distinct values from.
+
+        Returns:
+            A list of distinct, non-null values for the column.
+        """
+        query = f"SELECT DISTINCT {column}"
+        if self._where_clauses:
+            query += f" WHERE {' AND '.join(self._where_clauses)}"
+        # Override the SODA2 default page size (1000) so discovery is complete.
+        query += f" LIMIT {self._limit}"
+
+        if self.cache is not None:
+            key = self._cache_key(distinct=query)
+            cached = self.cache.get(key)
+            if cached is not None:
+                return cached
+
+        try:
+            results = self._request_with_retry(query=query)
+        except Exception as e:
+            logger.error(f"Error fetching distinct values for {column}: {e}")
+            return []
+
+        values = [r[column] for r in results if r.get(column) is not None]
+        if self.cache is not None:
+            self.cache.set(self._cache_key(distinct=query), values, self.cache_ttl)
+        return values
 
     def execute(self) -> pd.DataFrame:
         """
