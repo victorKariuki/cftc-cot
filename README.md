@@ -1,6 +1,11 @@
 # CFTC COT SDK
 
-[![PyPI](https://img.shields.io/pypi/v/cftc-cot.svg)](https://pypi.org/project/cftc-cot/)
+[![PyPI](https://img.shields.io/pypi/v/cftc-cot-soda.svg)](https://pypi.org/project/cftc-cot-soda/)
+[![GitHub release](https://img.shields.io/github/v/release/victorKariuki/cftc-cot.svg)](https://github.com/victorKariuki/cftc-cot/releases/latest)
+[![Python versions](https://img.shields.io/pypi/pyversions/cftc-cot-soda.svg)](https://pypi.org/project/cftc-cot-soda/)
+[![Downloads](https://img.shields.io/pypi/dm/cftc-cot-soda.svg)](https://pypi.org/project/cftc-cot-soda/)
+[![Wheel](https://img.shields.io/pypi/wheel/cftc-cot-soda.svg)](https://pypi.org/project/cftc-cot-soda/)
+[![Publish to PyPI](https://github.com/victorKariuki/cftc-cot/actions/workflows/publish.yml/badge.svg)](https://github.com/victorKariuki/cftc-cot/actions/workflows/publish.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A robust, verified Python SDK for accessing, querying, and analyzing [CFTC Commitments of Traders (COT)](https://publicreporting.cftc.gov/stories/s/r4w3-av2u) data.
