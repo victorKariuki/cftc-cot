@@ -12,3 +12,7 @@ __pycache__/
 # Local
 .env
 .DS_Store
+.pypirc
+
+# Cache (default disk-cache directory)
+cot_cache/

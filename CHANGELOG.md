@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-06-20
+
+### Security
+- Coerce numeric filter thresholds (`*_gt` helpers) to `int`, raising `COTQueryError`
+  on non-numeric input to prevent SoQL injection through interpolated query values.
+- Document injection-safe methods (`market`, dates, numeric filters) vs. trusted-input-only
+  escape hatches (`where`, `select`, `order_by`) in `SECURITY.md`.
+- Add disk-cache trust guidance: `diskcache` uses `pickle`, so cache directories must
+  not be shared across trust boundaries.
+
+### Added
+- "Install from GitHub" instructions (git+https and release-asset wheel) in the README.
+
+### Fixed
+- Ignore `.pypirc` and the default `cot_cache/` directory in `.gitignore`.
+
 ## [0.2.0] - 2026-06-20
 
 ### Added

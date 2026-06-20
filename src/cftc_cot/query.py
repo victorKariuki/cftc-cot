@@ -19,6 +19,23 @@ def _q(value: str) -> str:
     return str(value).replace("'", "''")
 
 
+def _num(value: Any) -> int:
+    """
+    Coerce a numeric filter threshold to ``int``, rejecting anything that isn't a
+    plain number. This prevents SoQL injection through the ``*_gt`` helpers, whose
+    values are interpolated directly into the query string.
+
+    Raises:
+        COTQueryError: If ``value`` cannot be interpreted as an integer.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        raise COTQueryError(f"Numeric threshold must be a number, got {value!r}")
+    try:
+        return int(value)
+    except (TypeError, ValueError) as exc:
+        raise COTQueryError(f"Numeric threshold must be a number, got {value!r}") from exc
+
+
 class COTQuery:
     """Complete SODA2 query builder for all 6 CFTC COT datasets."""
 
@@ -301,7 +318,7 @@ class COTQuery:
             The COTQuery instance.
         """
         self._check_classification("legacy")
-        self.where(f"noncomm_positions_long_all > {amount}")
+        self.where(f"noncomm_positions_long_all > {_num(amount)}")
         return self
 
     def noncomm_short_gt(self, amount: int) -> COTQuery:
@@ -315,7 +332,7 @@ class COTQuery:
             The COTQuery instance.
         """
         self._check_classification("legacy")
-        self.where(f"noncomm_positions_short_all > {amount}")
+        self.where(f"noncomm_positions_short_all > {_num(amount)}")
         return self
 
     def comm_long_gt(self, amount: int) -> COTQuery:
@@ -329,7 +346,7 @@ class COTQuery:
             The COTQuery instance.
         """
         self._check_classification("legacy")
-        self.where(f"comm_positions_long_all > {amount}")
+        self.where(f"comm_positions_long_all > {_num(amount)}")
         return self
 
     def comm_short_gt(self, amount: int) -> COTQuery:
@@ -343,7 +360,7 @@ class COTQuery:
             The COTQuery instance.
         """
         self._check_classification("legacy")
-        self.where(f"comm_positions_short_all > {amount}")
+        self.where(f"comm_positions_short_all > {_num(amount)}")
         return self
 
     def swap_dealers_long_gt(self, amount: int) -> COTQuery:
@@ -357,7 +374,7 @@ class COTQuery:
             The COTQuery instance.
         """
         self._check_classification("disaggregated")
-        self.where(f"swap_positions_long_all > {amount}")
+        self.where(f"swap_positions_long_all > {_num(amount)}")
         return self
 
     def managed_money_long_gt(self, amount: int) -> COTQuery:
@@ -371,7 +388,7 @@ class COTQuery:
             The COTQuery instance.
         """
         self._check_classification("disaggregated")
-        self.where(f"m_money_positions_long_all > {amount}")
+        self.where(f"m_money_positions_long_all > {_num(amount)}")
         return self
 
     def producer_merchant_short_gt(self, amount: int) -> COTQuery:
@@ -385,7 +402,7 @@ class COTQuery:
             The COTQuery instance.
         """
         self._check_classification("disaggregated")
-        self.where(f"prod_merc_positions_short > {amount}")
+        self.where(f"prod_merc_positions_short > {_num(amount)}")
         return self
 
     def dealer_long_gt(self, amount: int) -> COTQuery:
@@ -399,7 +416,7 @@ class COTQuery:
             The COTQuery instance.
         """
         self._check_classification("tff")
-        self.where(f"dealer_positions_long_all > {amount}")
+        self.where(f"dealer_positions_long_all > {_num(amount)}")
         return self
 
     def asset_manager_long_gt(self, amount: int) -> COTQuery:
@@ -413,7 +430,7 @@ class COTQuery:
             The COTQuery instance.
         """
         self._check_classification("tff")
-        self.where(f"asset_mgr_positions_long > {amount}")
+        self.where(f"asset_mgr_positions_long > {_num(amount)}")
         return self
 
     def leveraged_funds_long_gt(self, amount: int) -> COTQuery:
@@ -427,7 +444,7 @@ class COTQuery:
             The COTQuery instance.
         """
         self._check_classification("tff")
-        self.where(f"lev_money_positions_long > {amount}")
+        self.where(f"lev_money_positions_long > {_num(amount)}")
         return self
 
     def long_positions_gt(self, amount: int) -> COTQuery:
@@ -440,7 +457,7 @@ class COTQuery:
         Returns:
             The COTQuery instance.
         """
-        self.where(f"tot_rept_positions_long_all > {amount}")
+        self.where(f"tot_rept_positions_long_all > {_num(amount)}")
         return self
 
     def short_positions_gt(self, amount: int) -> COTQuery:
@@ -453,7 +470,7 @@ class COTQuery:
         Returns:
             The COTQuery instance.
         """
-        self.where(f"tot_rept_positions_short > {amount}")
+        self.where(f"tot_rept_positions_short > {_num(amount)}")
         return self
 
     def order_by_date(self, desc: bool = True) -> COTQuery:
