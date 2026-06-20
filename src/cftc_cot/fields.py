@@ -1,6 +1,13 @@
+"""
+Field constants for CFTC COT datasets.
+
+This module provides authoritative constants for API field names. 
+It preserves API-specific quirks like typos and unusual naming conventions.
+"""
 from typing import List, Final
 
 class BaseFields:
+    """Base class for common COT field constants."""
     # Common to all datasets
     REPORT_DATE: Final = "report_date_as_yyyy_mm_dd"
     YYYY_WEEK: Final = "yyyy_report_week_ww"

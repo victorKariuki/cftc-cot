@@ -13,14 +13,20 @@ The `cftc-cot` SDK provides a fluent, production-ready interface for the CFTC's 
 
 - **Fluent API**: Chainable query building for intuitive data retrieval.
 - **Production-Tested**: Verified field mappings and API interactions against live CFTC data.
-- **Advanced Analysis**: Built-in metrics including Net Positions, Z-Scores, and extreme positioning detection.
+- **Advanced Analysis**: Net Positions, Z-Scores, the classic 0–100 **COT Index**, extreme positioning detection, long/short ratios, percentile ranks, and week-over-week change.
+- **Caching**: Optional in-memory or persistent disk caching of API responses (COT data updates weekly, so a 24h TTL eliminates redundant requests).
+- **Resilient Networking**: Automatic retry with exponential backoff on transient API failures (429/5xx).
+- **Command-Line Interface**: A `cftc-cot` CLI for quick lookups without writing Python.
 - **Robust Field Handling**: Preserves official API quirks (typos, naming inconsistencies) using structured field constants.
 - **Production Ready**: Full type hinting, comprehensive exception hierarchy, and rate-limiting support via app tokens.
 
 ## Installation
 
 ```bash
-pip install cftc-cot
+pip install cftc-cot-soda
+
+# With disk caching support:
+pip install cftc-cot-soda[cache]
 ```
 
 ## Quick Start
@@ -34,11 +40,31 @@ client = COTClient()
 # Query: 52-week history of Crude Oil positioning
 df = client.legacy().market("Crude Oil").last_n_weeks(52).execute()
 
-# Analyze: Compute net positions and Z-scores
+# Analyze: Compute net positions and the COT Index
 analysis = COTAnalysis(df, classification="legacy")
-df_analyzed = analysis.z_scores()
+df_analyzed = analysis.cot_index(window=52)
 
-print(df_analyzed[['report_date_as_yyyy_mm_dd', 'noncomm_net', 'noncomm_net_zscore']].tail())
+print(df_analyzed[['report_date_as_yyyy_mm_dd', 'noncomm_net', 'noncomm_net_cot_index']].tail())
+```
+
+### Caching
+
+```python
+# In-memory cache (per-process) or persistent disk cache.
+client = COTClient(cache="memory")
+client = COTClient(cache="disk", cache_dir="./cot_cache", cache_ttl=86400)
+```
+
+### Command-Line Interface
+
+```bash
+cftc-cot latest  --dataset legacy --market "Crude Oil"
+cftc-cot history --dataset legacy --market "Crude Oil" --weeks 52
+cftc-cot markets --dataset legacy
+cftc-cot index   --dataset legacy --market "Crude Oil" --window 156
+
+# Choose output format and enable caching:
+cftc-cot --format json --cache memory latest --dataset legacy --market "Gold"
 ```
 
 ## Documentation
