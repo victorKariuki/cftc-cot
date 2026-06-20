@@ -4,15 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cftc-cot-soda"
-version = "0.1.1"
+version = "0.2.0"
 description = "Python SDK for CFTC Commitments of Traders data"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 dependencies = [
-    "pandas>=1.5",
+    "pandas>=2.0",
+    "numpy>=1.23",
     "sodapy>=2.2",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "pytest-cov"]
+cache = ["diskcache>=5.0"]
+
+[project.scripts]
+cftc-cot = "cftc_cot.cli:main"
