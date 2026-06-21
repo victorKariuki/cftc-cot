@@ -249,16 +249,71 @@ class COTQuery:
         self.where(f"report_date_as_yyyy_mm_dd <= '{_q(date)}'")
         return self
 
+    def _recent_report_dates(self, n: int) -> List[str]:
+        """The up-to-N most recent distinct report dates (``YYYY-MM-DD``, newest
+        first) matching the current filters.
+
+        Trusts the dataset's actual ``report_date_as_yyyy_mm_dd`` values rather
+        than assuming a fixed weekly cadence — CFTC dates can shift for holidays,
+        and the data lags wall-clock time. Honors the configured cache and any
+        WHERE clauses already on the query (so a market-filtered query returns
+        that market's own report dates).
+        """
+        query = "SELECT report_date_as_yyyy_mm_dd"
+        if self._where_clauses:
+            query += f" WHERE {' AND '.join(self._where_clauses)}"
+        query += (
+            " GROUP BY report_date_as_yyyy_mm_dd"
+            " ORDER BY report_date_as_yyyy_mm_dd DESC"
+            f" LIMIT {int(n)}"
+        )
+
+        if self.cache is not None:
+            cached = self.cache.get(self._cache_key(recent=query))
+            if cached is not None:
+                return cached
+
+        try:
+            results = self._request_with_retry(query=query)
+        except Exception as e:
+            logger.error(f"Error fetching recent report dates: {e}")
+            return []
+
+        dates = [
+            r["report_date_as_yyyy_mm_dd"][:10]
+            for r in results
+            if r.get("report_date_as_yyyy_mm_dd")
+        ]
+        if self.cache is not None:
+            self.cache.set(self._cache_key(recent=query), dates, self.cache_ttl)
+        return dates
+
     def last_n_weeks(self, n: int = 52) -> COTQuery:
         """
-        Filter to results from the last N weeks.
+        Filter to the most recent N weekly reports.
+
+        CFTC publishes weekly with a multi-day lag (Tuesday positions released
+        the following Friday), so a window measured from ``datetime.now()`` can
+        sit entirely *newer* than the latest published report and come back
+        empty — e.g. ``last_n_weeks(1)`` returning nothing while ``2`` returns
+        data. To keep "N weeks" consistent and never empty due to lag, this
+        trusts the data's own ``report_date_as_yyyy_mm_dd`` values: it filters to
+        rows on or after the N-th most recent report date, yielding exactly the N
+        latest reports (no week arithmetic, so holiday-shifted dates are handled).
+        When no data matches the current filters, it falls back to a now-anchored
+        window.
 
         Args:
-            n: Number of weeks to look back.
+            n: Number of weekly reports to look back.
 
         Returns:
             The COTQuery instance.
         """
+        dates = self._recent_report_dates(n)
+        if dates:
+            # >= the N-th most recent actual report date => exactly N reports.
+            return self.date_after(dates[-1])
+        # No data for these filters — fall back to a now-anchored window.
         start_date = (datetime.now() - timedelta(weeks=n)).strftime("%Y-%m-%d")
         return self.date_after(start_date)
 

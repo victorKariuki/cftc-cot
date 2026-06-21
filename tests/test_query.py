@@ -69,17 +69,27 @@ def test_exchange_escapes_apostrophe():
 
 
 def test_distinct_values_builds_query_with_filters():
-    query = COTQuery("legacy").last_n_weeks(4)
+    query = COTQuery("legacy")
     captured = {}
 
     def fake_get(dataset_id, **kwargs):
-        captured["query"] = kwargs["query"]
+        q = kwargs["query"]
+        # last_n_weeks first looks up the recent report dates to anchor the window.
+        if "GROUP BY report_date_as_yyyy_mm_dd" in q:
+            return [
+                {"report_date_as_yyyy_mm_dd": "2024-01-30T00:00:00.000"},
+                {"report_date_as_yyyy_mm_dd": "2024-01-23T00:00:00.000"},
+                {"report_date_as_yyyy_mm_dd": "2024-01-16T00:00:00.000"},
+                {"report_date_as_yyyy_mm_dd": "2024-01-09T00:00:00.000"},
+            ]
+        captured["query"] = q
         return [
             {"market_and_exchange_names": "GOLD - COMMODITY EXCHANGE INC."},
             {"market_and_exchange_names": "SILVER - COMMODITY EXCHANGE INC."},
         ]
 
     query.client.get = fake_get
+    query.last_n_weeks(4)
     values = query.distinct_values("market_and_exchange_names")
 
     assert values == [
@@ -89,6 +99,36 @@ def test_distinct_values_builds_query_with_filters():
     assert captured["query"].startswith("SELECT DISTINCT market_and_exchange_names")
     assert "WHERE report_date_as_yyyy_mm_dd >=" in captured["query"]
     assert "LIMIT" in captured["query"]
+
+
+def test_last_n_weeks_uses_actual_report_dates():
+    # Trust the dataset's real report dates instead of week arithmetic: the
+    # filter bound is the N-th most recent actual date (handles holiday shifts).
+    import re
+
+    recent = [
+        {"report_date_as_yyyy_mm_dd": "2026-06-09T00:00:00.000"},
+        {"report_date_as_yyyy_mm_dd": "2026-06-02T00:00:00.000"},
+        {"report_date_as_yyyy_mm_dd": "2026-05-22T00:00:00.000"},  # holiday-shifted
+    ]
+
+    def fake_get(dataset_id, **kwargs):
+        q = kwargs["query"]
+        assert "GROUP BY report_date_as_yyyy_mm_dd" in q
+        assert "ORDER BY report_date_as_yyyy_mm_dd DESC" in q
+        n = int(re.search(r"LIMIT (\d+)", q).group(1))
+        return recent[:n]
+
+    q1 = COTQuery("legacy")
+    q1.client.get = fake_get
+    q1.last_n_weeks(1)
+    assert "report_date_as_yyyy_mm_dd >= '2026-06-09'" in q1.to_soda2()
+
+    # 3 reports back lands on the actual 3rd date, not latest-2weeks (2026-05-26).
+    q3 = COTQuery("legacy")
+    q3.client.get = fake_get
+    q3.last_n_weeks(3)
+    assert "report_date_as_yyyy_mm_dd >= '2026-05-22'" in q3.to_soda2()
 
 
 def test_retry_succeeds_after_transient_failure():
