@@ -18,6 +18,7 @@ The `cftc-cot` SDK provides a fluent, production-ready interface for the CFTC's 
 
 - **Fluent API**: Chainable query building for intuitive data retrieval.
 - **Market & Exchange Discovery**: List markets and exchanges, filter queries by exchange, and scope `list_markets(weeks=...)` to a recent window so retired contracts drop out.
+- **Cross-domain analysis**: COT Index across multiple windows (`cot_index_multi`), a `masking()` metric exposing positioning the coarse report hides, and `compare()` — a tidy long frame for cross-market and cross-classification comparison.
 - **Production-Tested**: Verified field mappings and API interactions against live CFTC data.
 - **Advanced Analysis**: Net Positions, Z-Scores, the classic 0–100 **COT Index**, extreme positioning detection, long/short ratios, percentile ranks, and week-over-week change.
 - **Caching**: Optional in-memory or persistent disk caching of API responses (COT data updates weekly, so a 24h TTL eliminates redundant requests).
@@ -39,10 +40,10 @@ pip install cftc-cot-soda[cache]
 
 ```bash
 # Latest tagged release, straight from the source repo
-pip install git+https://github.com/victorKariuki/cftc-cot.git@v0.4.0
+pip install git+https://github.com/victorKariuki/cftc-cot.git@v0.5.0
 
 # Or the wheel attached to a GitHub Release
-pip install https://github.com/victorKariuki/cftc-cot/releases/download/v0.4.0/cftc_cot_soda-0.4.0-py3-none-any.whl
+pip install https://github.com/victorKariuki/cftc-cot/releases/download/v0.5.0/cftc_cot_soda-0.5.0-py3-none-any.whl
 ```
 
 ## Quick Start

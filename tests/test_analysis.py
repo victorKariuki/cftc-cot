@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 from cftc_cot.analysis import COTAnalysis
-from cftc_cot.fields import LegacyFields
+from cftc_cot.fields import LegacyFields, DisaggregatedFields
 
 def test_net_positions():
     data = {
@@ -48,12 +48,73 @@ def test_cot_index_min_and_max():
     assert idx.iloc[2] == 100.0     # window-max
 
 
-def test_extremes_flags():
-    df = _legacy_df([200, 100, 300], [0, 0, 0])
+def test_extremes_excludes_ramp_and_requires_persistence():
+    # Monotonic rising net -> COT index pins to 100 once the window has a spread.
+    # window=3 => ramp is the first 2 rows (incomplete window); persistence=2 means
+    # a flag needs two consecutive post-ramp extremes.
+    df = _legacy_df([10, 20, 30, 40, 50], [0, 0, 0, 0, 0])
     analysis = COTAnalysis(df, classification="legacy")
-    extreme = analysis.extremes(threshold=0.9, window=52)["noncomm_net_extreme"]
-    assert extreme.iloc[1] == "bearish"   # COT index 0
-    assert extreme.iloc[2] == "bullish"   # COT index 100
+    ex = analysis.extremes(threshold=0.95, window=3, persistence=2)["noncomm_net_extreme"]
+    assert pd.isna(ex.iloc[0])  # ramp (window not full)
+    assert pd.isna(ex.iloc[1])  # ramp
+    assert pd.isna(ex.iloc[2])  # first full window, but not yet sustained 2 weeks
+    assert ex.iloc[3] == "bullish"  # sustained
+    assert ex.iloc[4] == "bullish"
+
+
+def test_extremes_persistence_one_flags_first_full_window():
+    df = _legacy_df([10, 20, 30, 40, 50], [0, 0, 0, 0, 0])
+    analysis = COTAnalysis(df, classification="legacy")
+    ex = analysis.extremes(threshold=0.95, window=3, persistence=1)["noncomm_net_extreme"]
+    assert pd.isna(ex.iloc[1])      # still in the ramp
+    assert ex.iloc[2] == "bullish"  # first full window flags immediately
+
+
+def test_extremes_bearish_on_falling_net():
+    df = _legacy_df([50, 40, 30, 20, 10], [0, 0, 0, 0, 0])
+    analysis = COTAnalysis(df, classification="legacy")
+    ex = analysis.extremes(threshold=0.95, window=3, persistence=2)["noncomm_net_extreme"]
+    assert ex.iloc[3] == "bearish"
+    assert ex.iloc[4] == "bearish"
+
+
+def test_cot_index_multi_emits_per_window_and_skips_oversized():
+    df = _legacy_df([10, 20, 30, 40, 50], [0, 0, 0, 0, 0])
+    analysis = COTAnalysis(df, classification="legacy")
+    out = analysis.cot_index_multi(windows=(3, 99))
+    assert "noncomm_net_cot_index_w3" in out.columns
+    assert "noncomm_net_cot_index_w99" not in out.columns  # window > history -> skipped
+    assert out["noncomm_net_cot_index_w3"].iloc[-1] == 100.0
+
+
+def _disagg_df(pm_long, pm_short, swap_long, swap_short):
+    return pd.DataFrame(
+        {
+            DisaggregatedFields.PROD_MERC_LONG: pm_long,
+            DisaggregatedFields.PROD_MERC_SHORT: pm_short,
+            DisaggregatedFields.SWAP_LONG: swap_long,
+            DisaggregatedFields.SWAP_SHORT: swap_short,
+        }
+    )
+
+
+def test_masking_detects_offsetting_components():
+    # producers net short, swaps net long -> headline "commercial" net is small but
+    # gross is large, and the two components are negatively correlated.
+    df = _disagg_df(pm_long=[0, 0], pm_short=[100, 200],
+                    swap_long=[120, 180], swap_short=[0, 0])
+    m = COTAnalysis(df, classification="disaggregated").masking()
+    row = m[m["group"] == "commercial"].iloc[0]
+    assert row["masking_ratio"] > 5          # gross >> |net|
+    assert row["components_corr"] < 0         # components offset
+    # non_commercial group is absent (its component columns weren't provided)
+    assert "non_commercial" not in set(m["group"])
+
+
+def test_masking_empty_for_legacy():
+    df = _legacy_df([100, 200], [50, 50])
+    m = COTAnalysis(df, classification="legacy").masking()
+    assert m.empty
 
 
 def test_long_short_ratios():

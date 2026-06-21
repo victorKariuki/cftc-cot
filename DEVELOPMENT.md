@@ -80,3 +80,6 @@ This project uses **Git-Flow**.
 - `master`: Production-ready code.
 - `develop`: Integration branch.
 - Feature/Bugfix branches: Created from `develop`, merged back via `git flow finish`.
+
+For cutting a version, tagging, and publishing to PyPI (including the current
+manual-`twine` fallback while CI is billing-locked), see [RELEASING.md](RELEASING.md).

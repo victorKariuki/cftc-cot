@@ -16,6 +16,24 @@ class COTAnalysis:
         ValueError: If an unknown classification is provided.
     """
 
+    # Parent trader groups whose component nets the coarse (legacy) report sums
+    # together. Used by :meth:`masking` to expose offsetting positions legacy
+    # hides. Legacy itself has no finer split, so it is absent.
+    _MASKING_GROUPS = {
+        "disaggregated": {
+            "commercial": ("prod_merc_net", "swap_net"),
+            "non_commercial": ("m_money_net", "other_net"),
+        },
+        "tff": {
+            "reportables": (
+                "dealer_net",
+                "asset_mgr_net",
+                "lev_money_net",
+                "other_net",
+            ),
+        },
+    }
+
     def __init__(self, df: pd.DataFrame, classification: str):
         self.df = df.copy()
         self.classification = classification
@@ -105,33 +123,141 @@ class COTAnalysis:
                 )
         return self.df
 
-    def extremes(self, threshold: float = 0.9, window: int = 156) -> pd.DataFrame:
+    def cot_index_multi(self, windows=(26, 52, 156)) -> pd.DataFrame:
+        """
+        Compute the COT Index at several rolling windows (a term structure).
+
+        The same position can be an extreme on a short window but mid-range on a
+        long one, so charting the index across windows reveals short- vs
+        long-term positioning. Emits ``{col}_cot_index_w{N}`` columns; windows
+        longer than the available history are skipped.
+
+        Args:
+            windows: Iterable of rolling window sizes, in weeks.
+
+        Returns:
+            The DataFrame enriched with per-window COT Index columns.
+        """
+        self.net_positions()
+        n = len(self.df)
+        for w in windows:
+            if w > n:
+                continue
+            for col in self.net_map.keys():
+                if col in self.df.columns:
+                    series = self.df[col]
+                    roll_min = series.rolling(w, min_periods=1).min()
+                    roll_max = series.rolling(w, min_periods=1).max()
+                    span = roll_max - roll_min
+                    self.df[f"{col}_cot_index_w{w}"] = np.where(
+                        span == 0, np.nan, 100 * (series - roll_min) / span
+                    )
+        return self.df
+
+    def extremes(
+        self, threshold: float = 0.95, window: int = 156, persistence: int = 2
+    ) -> pd.DataFrame:
         """
         Flag extreme positioning based on the COT Index.
+
+        The COT Index is a rolling min-max normalization, so a trending series
+        repeatedly sets new highs/lows and pins to 0/100 — flagging too often. Two
+        guards keep the signal meaningful:
+
+        * the first ``window`` rows (an incomplete lookback, where the index is
+          degenerate) are never flagged;
+        * a reading must stay extreme for at least ``persistence`` consecutive
+          weeks before it is flagged.
 
         Args:
             threshold: Fraction (0-1) marking the bullish cutoff. Values at or above
                 ``threshold * 100`` are flagged ``"bullish"``; values at or below
                 ``(1 - threshold) * 100`` are flagged ``"bearish"``.
             window: The COT Index lookback window in weeks.
+            persistence: Consecutive weeks a reading must remain extreme to flag
+                (1 disables the persistence filter).
 
         Returns:
             The DataFrame enriched with ``{col}_extreme`` columns
             (``"bullish"``/``"bearish"``/``NaN``).
+
+        .. versionchanged:: 0.5.0
+            Default ``threshold`` raised to 0.95, ramp rows excluded, and the
+            ``persistence`` filter (default 2) added. Earlier versions flagged on
+            a bare ``threshold=0.9`` with no ramp/persistence guard.
         """
         self.cot_index(window=window)
         upper = threshold * 100
         lower = (1 - threshold) * 100
+        n = len(self.df)
+        # Only flag once the rolling window is full (exclude the degenerate ramp).
+        full = np.arange(n) >= (window - 1)
+
+        def sustained(mask: np.ndarray) -> np.ndarray:
+            if persistence <= 1:
+                return mask
+            run = pd.Series(mask).rolling(persistence, min_periods=persistence).sum()
+            return (run == persistence).to_numpy()
+
         for col in self.net_map.keys():
             index_col = f"{col}_cot_index"
             if index_col in self.df.columns:
-                idx = self.df[index_col]
+                idx = self.df[index_col].to_numpy()
+                bull = sustained((idx >= upper) & full)
+                bear = sustained((idx <= lower) & full)
                 self.df[f"{col}_extreme"] = np.select(
-                    [idx >= upper, idx <= lower],
-                    ["bullish", "bearish"],
-                    default=None,
+                    [bull, bear], ["bullish", "bearish"], default=None
                 )
         return self.df
+
+    def masking(self) -> pd.DataFrame:
+        """
+        Quantify how much the coarse (legacy) view masks an internal split.
+
+        For each parent trader group, compare the **gross** positioning
+        (``Σ|component net|``) against the **net** (``Σ component net``) the coarse
+        report shows. A high ``masking_ratio`` with negatively-correlated
+        components means the headline net hides large offsetting positions — e.g.
+        producers heavily short while swap dealers are heavily long.
+
+        Only meaningful for the finer classifications; returns an **empty**
+        DataFrame for ``legacy`` (it has no sub-split).
+
+        Returns:
+            One row per parent group with columns: ``group``, ``components``,
+            ``net`` (latest), ``gross`` (latest), ``masking_ratio``
+            (mean gross / mean |net| over the series), and ``components_corr``
+            (mean pairwise correlation of the component nets).
+        """
+        self.net_positions()
+        groups = self._MASKING_GROUPS.get(self.classification, {})
+        rows = []
+        for name, comps in groups.items():
+            present = [c for c in comps if c in self.df.columns]
+            if len(present) < 2:
+                continue
+            comp_df = self.df[present]
+            net = comp_df.sum(axis=1)
+            gross = comp_df.abs().sum(axis=1)
+            denom = net.abs().mean()
+            ratio = float(gross.mean() / denom) if denom else float("nan")
+            corrs = [
+                comp_df[present[i]].corr(comp_df[present[j]])
+                for i in range(len(present))
+                for j in range(i + 1, len(present))
+            ]
+            corr = float(np.nanmean(corrs)) if corrs else float("nan")
+            rows.append(
+                {
+                    "group": name,
+                    "components": list(present),
+                    "net": float(net.iloc[-1]) if len(net) else float("nan"),
+                    "gross": float(gross.iloc[-1]) if len(gross) else float("nan"),
+                    "masking_ratio": ratio,
+                    "components_corr": corr,
+                }
+            )
+        return pd.DataFrame(rows)
 
     def long_short_ratios(self) -> pd.DataFrame:
         """
