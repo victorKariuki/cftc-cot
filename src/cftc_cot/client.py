@@ -163,3 +163,108 @@ class COTClient:
         if not sep:
             return name, ""
         return market, exchange
+
+    # Classification families a market can appear in. legacy is the superset;
+    # disaggregated (physical commodities) and tff (financials) never overlap.
+    CLASSIFICATIONS = ("legacy", "disaggregated", "tff")
+
+    def classifications_for(
+        self, market: str, weeks: Optional[int] = None
+    ) -> list[str]:
+        """
+        Return which classifications contain a market (exact name match).
+
+        A market is in ``legacy`` plus at most one finer set, so the result is
+        typically ``["legacy", "disaggregated"]`` (commodities) or
+        ``["legacy", "tff"]`` (financials).
+
+        Args:
+            market: The exact ``market_and_exchange_names`` value.
+            weeks: If given, only consider markets reporting in the last N weeks.
+
+        Returns:
+            The subset of ``CLASSIFICATIONS`` containing the market.
+        """
+        return [
+            cls
+            for cls in self.CLASSIFICATIONS
+            if market in set(self.list_markets(cls, weeks=weeks))
+        ]
+
+    def compare(
+        self,
+        markets,
+        classifications: Optional[list[str]] = None,
+        weeks: int = 156,
+        windows=(),
+    ) -> pd.DataFrame:
+        """
+        Build a tidy long frame for cross-market / cross-classification analysis.
+
+        Each market is fetched and analyzed independently per classification, then
+        reshaped to one row per ``(market, classification, category, date)`` — the
+        canonical shape for comparison views (correlations, heatmaps, etc.).
+
+        Args:
+            markets: A market name or list of names (exact match).
+            classifications: Classifications to include; defaults to those that
+                actually contain each market (via :meth:`classifications_for`).
+            weeks: Weeks of history to analyze (also raised to cover ``windows``).
+            windows: Extra COT Index windows to include as ``cot_index_w{N}`` cols.
+
+        Returns:
+            Long-form DataFrame with columns ``market, exchange, classification,
+            category, date, net, cot_index, zscore`` (+ one ``cot_index_w{N}`` per
+            window). Empty if nothing resolved.
+        """
+        from .analysis import COTAnalysis
+
+        if isinstance(markets, str):
+            markets = [markets]
+
+        # Fetch enough rows that the longest window is computable (weekly reports
+        # mean ~N rows per N weeks, so add a buffer for the off-by-one + gaps).
+        fetch_weeks = max([weeks, *windows]) + 12 if windows else weeks
+        date_col = "report_date_as_yyyy_mm_dd"
+        frames = []
+
+        for full in markets:
+            market_short, exchange = self.split_market_exchange(full)
+            cls_list = classifications or self.classifications_for(full, weeks=weeks)
+
+            for cls in cls_list:
+                df = self.history(cls, full, weeks=fetch_weeks, exact=True)
+                if df.empty:
+                    continue
+
+                classification = COTQuery(cls).classification
+                analysis = COTAnalysis(df, classification)
+                analysis.net_positions()
+                analysis.z_scores()
+                analysis.cot_index()
+                if windows:
+                    analysis.cot_index_multi(windows=windows)
+                adf = analysis.df
+
+                for cat in analysis.net_map.keys():
+                    if cat not in adf.columns:
+                        continue
+                    rec = pd.DataFrame(
+                        {
+                            "market": market_short,
+                            "exchange": exchange,
+                            "classification": classification,
+                            "category": cat,
+                            "date": adf[date_col],
+                            "net": adf[cat],
+                            "cot_index": adf.get(f"{cat}_cot_index"),
+                            "zscore": adf.get(f"{cat}_zscore"),
+                        }
+                    )
+                    for w in windows:
+                        rec[f"cot_index_w{w}"] = adf.get(f"{cat}_cot_index_w{w}")
+                    frames.append(rec)
+
+        if not frames:
+            return pd.DataFrame()
+        return pd.concat(frames, ignore_index=True)

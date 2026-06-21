@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-06-21
+
+### Added
+- `COTAnalysis.cot_index_multi(windows=(26, 52, 156))` — COT Index at several
+  rolling windows (`{cat}_cot_index_w{N}`) for a term-structure view; windows
+  longer than the available history are skipped.
+- `COTAnalysis.masking()` — quantifies how much the coarse (legacy) view hides an
+  internal split: gross vs net positioning, masking ratio, and component
+  correlation per parent trader group (disaggregated/tff).
+- `COTClient.classifications_for(market, weeks=None)` — which classifications
+  contain a market.
+- `COTClient.compare(markets, classifications=None, weeks=156, windows=())` — a
+  tidy long frame (`market, exchange, classification, category, date, net,
+  cot_index, zscore` + per-window) for cross-market/cross-classification analysis.
+
+### Changed
+- **`COTAnalysis.extremes()` defaults changed** (improves signal quality): default
+  `threshold` raised 0.9 → 0.95, the incomplete-window "ramp" is no longer flagged,
+  and a new `persistence=2` requires a reading to stay extreme for ≥N consecutive
+  weeks. The old behavior flagged ~38% of weeks; pass `persistence=1` for the prior
+  no-persistence behavior. The `cftc-cot-mcp` `extremes` tool inherits this.
+
 ## [0.4.0] - 2026-06-20
 
 ### Added
