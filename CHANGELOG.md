@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-06-21
+
+### Fixed
+- `COTQuery.last_n_weeks(n)` now anchors to the dataset's actual most-recent
+  report dates instead of a `datetime.now()`-relative window. CFTC publishes
+  weekly with a multi-day lag, so the old window could sit entirely newer than
+  the latest report and return nothing — e.g. a 1-week lookback came back empty
+  while 2 weeks returned data. It now filters to rows on/after the N-th most
+  recent `report_date_as_yyyy_mm_dd`, so "N weeks" reliably means the N most
+  recent reports and never empties out from publishing lag. Trusting the data's
+  own report dates (rather than week arithmetic) also handles holiday-shifted
+  dates. Falls back to a now-anchored window only when no data matches.
+  `list_markets`, `list_exchanges`, `history`, `compare`, and
+  `classifications_for` all inherit the fix.
+
 ## [0.5.0] - 2026-06-21
 
 ### Added

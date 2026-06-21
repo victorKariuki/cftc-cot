@@ -54,7 +54,9 @@ from cftc_cot import COTClient, COTAnalysis
 # Initialize client
 client = COTClient()
 
-# Query: 52-week history of Crude Oil positioning
+# Query: the 52 most recent weekly reports of Crude Oil positioning.
+# last_n_weeks anchors to the data's actual latest report dates (not wall-clock
+# now), so it accounts for CFTC's publishing lag and never comes back empty.
 df = client.legacy().market("Crude Oil").last_n_weeks(52).execute()
 
 # Analyze: Compute net positions and the COT Index
